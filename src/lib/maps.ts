@@ -9,7 +9,7 @@ export const MAP_POOL: MapName[] = [
 
 // Splash arts hospedadas no CDN da Riot (valorant-api.com)
 export const MAP_IMAGES: Record<MapName, string> = {
-  Bind: "https://media.valorant-api.com/maps/2c9d57ec-4431-9c5e-2939-18db9bc6c687/splash.png",
+  Bind: "https://media.valorant-api.com/maps/2c9d57ec-4431-9c5e-2939-8f9ef6dd5cba/splash.png",
   Haven: "https://media.valorant-api.com/maps/2bee0dc9-4ffe-519b-1cbd-7fbe763a6047/splash.png",
   Split: "https://media.valorant-api.com/maps/d960549e-485c-e861-8d71-aa9d1aed12a2/splash.png",
   Ascent: "https://media.valorant-api.com/maps/7eaecc1b-4337-bbf6-6ab9-04b8f06b3319/splash.png",
