@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VisualizacaoRouteImport } from './routes/visualizacao'
 import { Route as VetoRouteImport } from './routes/veto'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VisualizacaoRoute = VisualizacaoRouteImport.update({
+  id: '/visualizacao',
+  path: '/visualizacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VetoRoute = VetoRouteImport.update({
   id: '/veto',
   path: '/veto',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/veto': typeof VetoRoute
+  '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/veto': typeof VetoRoute
+  '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/veto': typeof VetoRoute
+  '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/veto'
+  fullPaths: '/' | '/veto' | '/visualizacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/veto'
-  id: '__root__' | '/' | '/veto'
+  to: '/' | '/veto' | '/visualizacao'
+  id: '__root__' | '/' | '/veto' | '/visualizacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   VetoRoute: typeof VetoRoute
+  VisualizacaoRoute: typeof VisualizacaoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/visualizacao': {
+      id: '/visualizacao'
+      path: '/visualizacao'
+      fullPath: '/visualizacao'
+      preLoaderRoute: typeof VisualizacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/veto': {
       id: '/veto'
       path: '/veto'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   VetoRoute: VetoRoute,
+  VisualizacaoRoute: VisualizacaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

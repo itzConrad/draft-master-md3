@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useVeto, clearVetoStorage } from "@/hooks/useVeto";
 import { mapasDisponiveis, FASES } from "@/lib/vetoMachine";
-import { MAP_POOL, type MapName } from "@/lib/maps";
+import { MAP_POOL, type MapName, MAP_IMAGES } from "@/lib/maps";
 
 const SETUP_KEY = "valorant-veto-equipes-v1";
 const DRAW_KEY = "valorant-veto-draw-v1";
@@ -37,7 +37,7 @@ function VetoPage() {
       
       // Verificar se já existe um sorteio salvo
       const existingDraw = sessionStorage.getItem(DRAW_KEY);
-      if (!existingDraw) {
+      if (!existingDraw || existingDraw.trim() === "") {
         // Se não existe, mostrar a tela de sorteio
         setShowDraw(true);
       }
@@ -58,9 +58,13 @@ function VetoPage() {
 function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: string }; onDrawComplete: () => void }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [winner, setWinner] = useState<"A" | "B" | null>(null);
+  const [showResult, setShowResult] = useState(false);
 
   const handleDraw = () => {
     setIsDrawing(true);
+    setWinner(null);
+    setShowResult(false);
+
     // Animação de sorteio por 2 segundos
     const interval = setInterval(() => {
       setWinner(Math.random() > 0.5 ? "A" : "B");
@@ -71,13 +75,15 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
       const finalWinner = Math.random() > 0.5 ? "A" : "B";
       setWinner(finalWinner);
       setIsDrawing(false);
-      
+      setShowResult(true);
+
       // Salvar resultado do sorteio
       sessionStorage.setItem(DRAW_KEY, finalWinner);
-      
-      // Após 2 segundos, continuar
-      setTimeout(onDrawComplete, 2000);
     }, 2000);
+  };
+
+  const handleContinue = () => {
+    onDrawComplete();
   };
 
   return (
@@ -120,8 +126,8 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
         </div>
 
         {/* Resultado */}
-        {winner && !isDrawing && (
-          <div className="mb-8 p-4 rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)]">
+        {showResult && winner && (
+          <div className="mb-8 p-4 rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)] animate-fade-in">
             <p className="text-[var(--gold)] font-semibold">
               {equipes[winner]} começa escolhendo! 🎯
             </p>
@@ -130,11 +136,11 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
 
         {/* Botão */}
         <Button
-          onClick={handleDraw}
+          onClick={showResult ? handleContinue : handleDraw}
           disabled={isDrawing}
           className="w-full bg-[var(--gold)] text-black hover:bg-[var(--gold)]/90 font-semibold"
         >
-          {isDrawing ? "Sorteando..." : winner ? "Continuar" : "Sortear"}
+          {isDrawing ? "Sorteando..." : showResult ? "Continuar" : "Sortear"}
         </Button>
       </div>
     </main>
@@ -164,7 +170,11 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
   const handleReset = () => {
     if (confirm("Deseja recomeçar o veto?")) {
       clearVetoStorage();
+      // Limpar também o resultado do sorteio
+      sessionStorage.removeItem(DRAW_KEY);
       dispatch({ type: "RESET" });
+      // Recarregar a página para reiniciar o sorteio
+      window.location.reload();
     }
   };
 
@@ -176,54 +186,148 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
   // Fase final
   if (state.faseAtual >= FASES.length - 1) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background p-4">
-        <div className="max-w-2xl text-center">
-          <h1 className="text-4xl font-bold uppercase tracking-wider mb-4">Veto Finalizado</h1>
-          <p className="text-muted-foreground mb-8">Série MD3 configurada com sucesso!</p>
+      <main className="min-h-screen bg-background p-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8 animate-slide-up">
+            <h1 className="text-5xl font-bold uppercase tracking-wider mb-2 bg-gradient-to-r from-[var(--gold)] to-yellow-400 bg-clip-text text-transparent">
+              Veto Finalizado
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Série MD3 configurada com sucesso! 🎯
+            </p>
+            <div className="mt-4 text-sm text-muted-foreground">
+              {equipes.A} vs {equipes.B}
+            </div>
+          </div>
 
-          <div className="grid gap-4 mb-8">
-            <div className="space-y-4">
-              {Object.entries(state.picks).map(([key, pick]) => (
-                <div key={key} className="border rounded-lg p-4 text-left">
-                  <h3 className="font-semibold mb-2">
-                    {key === "mapa3" ? "Decider (Mapa 3)" : key === "mapa1" ? "Mapa 1" : "Mapa 2"}
-                  </h3>
-                  <p className="text-sm">
-                    <strong>Mapa:</strong> {pick.nome || "—"}
-                  </p>
-                  {pick.escolhidoPor && (
-                    <p className="text-sm">
-                      <strong>Escolhido por:</strong> {state.equipes[pick.escolhidoPor]}
-                    </p>
-                  )}
-                  <p className="text-sm">
-                    <strong>{state.equipes.A}:</strong> {pick.ladoEquipeA || "—"}
-                  </p>
-                  <p className="text-sm">
-                    <strong>{state.equipes.B}:</strong> {pick.ladoEquipeB || "—"}
-                  </p>
+          {/* Mapas Selecionados */}
+          <div className="mb-8 animate-scale-in delay-200">
+            <h2 className="text-2xl font-bold uppercase tracking-wide mb-6 text-center">Mapas da Série</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Object.entries(state.picks).map(([key, pick], index) => (
+                <div key={key} className={`group animate-slide-up delay-${(index + 1) * 100}`}>
+                  <div className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 ${
+                    key === "mapa3"
+                      ? "border-[var(--gold)] shadow-lg shadow-[var(--gold)]/20"
+                      : "border-[var(--navy)] shadow-lg shadow-[var(--navy)]/20"
+                  }`}>
+                    {/* Imagem do mapa */}
+                    <div className="aspect-[4/3] relative">
+                      <img
+                        src={MAP_IMAGES[pick.nome as MapName]}
+                        alt={pick.nome || ""}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                      {/* Label do mapa */}
+                      <div className="absolute top-4 left-4">
+                        <div className={`px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wide ${
+                          key === "mapa3"
+                            ? "bg-[var(--gold)] text-black"
+                            : "bg-[var(--navy)] text-[var(--gold)]"
+                        }`}>
+                          {key === "mapa3" ? "Decider" : key === "mapa1" ? "Mapa 1" : "Mapa 2"}
+                        </div>
+                      </div>
+
+                      {/* Nome do mapa */}
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <h3 className="text-2xl font-bold uppercase tracking-wider text-white mb-2">
+                          {pick.nome}
+                        </h3>
+
+                        {/* Quem escolheu */}
+                        {pick.escolhidoPor && (
+                          <p className="text-sm text-gray-300 mb-3">
+                            Escolhido por: <span className="font-semibold text-[var(--gold)]">{state.equipes[pick.escolhidoPor]}</span>
+                          </p>
+                        )}
+
+                        {/* Lados */}
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${pick.ladoEquipeA === "ataque" ? "bg-red-500" : "bg-blue-500"}`} />
+                            <span className="text-white font-medium">
+                              {state.equipes.A}: {pick.ladoEquipeA || "?"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${pick.ladoEquipeB === "ataque" ? "bg-red-500" : "bg-blue-500"}`} />
+                            <span className="text-white font-medium">
+                              {state.equipes.B}: {pick.ladoEquipeB || "?"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
 
-            <div className="border rounded-lg p-4 text-left">
-              <h3 className="font-semibold mb-2">Mapas Banidos</h3>
-              <div className="flex flex-wrap gap-2">
-                {state.mapasBanidos.map((ban) => (
-                  <div key={ban.nome} className="text-xs bg-muted px-2 py-1 rounded">
-                    {ban.nome} <span className="text-muted-foreground">({state.equipes[ban.banidoPor]})</span>
+          {/* Mapas Banidos */}
+          <div className="mb-8 animate-scale-in delay-500">
+            <h2 className="text-xl font-bold uppercase tracking-wide mb-4 text-center">Mapas Banidos</h2>
+            <div className="flex flex-wrap justify-center gap-3">
+              {state.mapasBanidos.map((ban, index) => (
+                <div key={ban.nome} className={`relative group animate-slide-up delay-${600 + index * 50}`}>
+                  <div className="w-32 h-24 relative overflow-hidden rounded-lg border border-red-500/50 bg-muted/30">
+                    <img
+                      src={MAP_IMAGES[ban.nome as MapName]}
+                      alt={ban.nome}
+                      className="w-full h-full object-cover grayscale opacity-60"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-red-600/40 flex items-center justify-center">
+                      <div className="text-white font-bold text-lg opacity-80">X</div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
+                      <p className="text-xs text-white font-medium text-center">{ban.nome}</p>
+                      <p className="text-xs text-gray-300 text-center">{state.equipes[ban.banidoPor]}</p>
+                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Resumo da Série */}
+          <div className="bg-muted/30 rounded-xl p-6 mb-8 animate-scale-in delay-700">
+            <h2 className="text-xl font-bold uppercase tracking-wide mb-4 text-center">Resumo da Série MD3</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-[var(--gold)] mb-1">3</div>
+                <div className="text-sm text-muted-foreground">Mapas Selecionados</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-500 mb-1">{state.mapasBanidos.length}</div>
+                <div className="text-sm text-muted-foreground">Mapas Banidos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[var(--navy)] mb-1">11</div>
+                <div className="text-sm text-muted-foreground">Pool Total</div>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 justify-center">
-            <Button onClick={handleReset} variant="outline">
-              Novo Veto
+          {/* Ações */}
+          <div className="flex flex-wrap gap-3 justify-center animate-slide-up delay-800">
+            <Button onClick={handleReset} variant="outline" size="lg" className="px-8">
+              🔄 Novo Veto
             </Button>
-            <Button onClick={handleGoHome} variant="outline">
-              Voltar à Página Inicial
+            <Button onClick={() => navigate({ to: "/visualizacao" })} variant="outline" size="lg" className="px-8">
+              📊 Visualização Animada
+            </Button>
+            <Button onClick={handleGoHome} variant="outline" size="lg" className="px-8">
+              🏠 Página Inicial
             </Button>
           </div>
         </div>
@@ -242,9 +346,14 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
               Fase {state.faseAtual + 1} de {FASES.length - 1}
             </p>
           </div>
-          <Button onClick={handleReset} variant="ghost" size="sm">
-            Recomeçar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleReset} variant="ghost" size="sm">
+              Recomeçar
+            </Button>
+            <Button onClick={() => navigate({ to: "/visualizacao" })} variant="outline" size="sm">
+              📊 Visualização
+            </Button>
+          </div>
         </div>
 
         {/* Equipes e fase */}
