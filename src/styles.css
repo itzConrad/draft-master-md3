@@ -63,26 +63,26 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.05 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.05 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.05 0 0);
+  --background: oklch(0.14 0.076 260);
+  --foreground: oklch(0.95 0.01 0);
+  --card: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.95 0.01 0);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.95 0.01 0);
   /* Navy primary #001F3F */
   --primary: oklch(0.246 0.064 254);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.246 0.064 254);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.45 0 0);
+  --muted: oklch(0.25 0.04 260);
+  --muted-foreground: oklch(0.75 0.01 0);
   /* Yellow accent #FFD700 */
   --accent: oklch(0.89 0.17 95);
   --accent-foreground: oklch(0.05 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.9 0 0);
-  --input: oklch(0.9 0 0);
+  --border: oklch(0.3 0.04 260);
+  --input: oklch(0.2 0.04 260);
   --ring: oklch(0.246 0.064 254);
   /* Brand tokens */
   --navy: oklch(0.246 0.064 254);

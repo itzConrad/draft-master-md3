@@ -8,6 +8,7 @@ import { mapasDisponiveis, FASES } from "@/lib/vetoMachine";
 import { MAP_POOL, type MapName } from "@/lib/maps";
 
 const SETUP_KEY = "valorant-veto-equipes-v1";
+const DRAW_KEY = "valorant-veto-draw-v1";
 
 export const Route = createFileRoute("/veto")({
   head: () => ({
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/veto")({
 function VetoPage() {
   const navigate = useNavigate();
   const [equipes, setEquipes] = useState<{ A: string; B: string } | null>(null);
+  const [showDraw, setShowDraw] = useState(false);
 
   useEffect(() => {
     const raw = sessionStorage.getItem(SETUP_KEY);
@@ -30,7 +32,15 @@ function VetoPage() {
       return;
     }
     try {
-      setEquipes(JSON.parse(raw));
+      const parsedEquipes = JSON.parse(raw);
+      setEquipes(parsedEquipes);
+      
+      // Verificar se já existe um sorteio salvo
+      const existingDraw = sessionStorage.getItem(DRAW_KEY);
+      if (!existingDraw) {
+        // Se não existe, mostrar a tela de sorteio
+        setShowDraw(true);
+      }
     } catch {
       navigate({ to: "/" });
     }
@@ -38,8 +48,99 @@ function VetoPage() {
 
   if (!equipes) return null;
 
+  if (showDraw) {
+    return <DrawScreen equipes={equipes} onDrawComplete={() => setShowDraw(false)} />;
+  }
+
   return <VetoContent equipes={equipes} />;
 }
+
+function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: string }; onDrawComplete: () => void }) {
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [winner, setWinner] = useState<"A" | "B" | null>(null);
+
+  const handleDraw = () => {
+    setIsDrawing(true);
+    // Animação de sorteio por 2 segundos
+    const interval = setInterval(() => {
+      setWinner(Math.random() > 0.5 ? "A" : "B");
+    }, 100);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      const finalWinner = Math.random() > 0.5 ? "A" : "B";
+      setWinner(finalWinner);
+      setIsDrawing(false);
+      
+      // Salvar resultado do sorteio
+      sessionStorage.setItem(DRAW_KEY, finalWinner);
+      
+      // Após 2 segundos, continuar
+      setTimeout(onDrawComplete, 2000);
+    }, 2000);
+  };
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-4xl font-bold uppercase tracking-wider mb-8">Sorteio</h1>
+        <p className="text-muted-foreground mb-8">Qual equipe começa escolhendo?</p>
+
+        {/* Cards das equipes */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div
+            className={`p-6 rounded-lg border-2 transition-all ${
+              winner === "A"
+                ? "border-[var(--gold)] bg-[var(--navy)] shadow-lg shadow-[var(--gold)]"
+                : "border-muted bg-muted/30"
+            }`}
+          >
+            <p className={`text-sm font-semibold mb-2 ${winner === "A" ? "text-[var(--gold)]" : "text-muted-foreground"}`}>
+              EQUIPE A
+            </p>
+            <p className={`text-xl font-bold ${winner === "A" ? "text-[var(--gold)]" : "text-foreground"}`}>
+              {equipes.A}
+            </p>
+          </div>
+
+          <div
+            className={`p-6 rounded-lg border-2 transition-all ${
+              winner === "B"
+                ? "border-[var(--gold)] bg-[var(--navy)] shadow-lg shadow-[var(--gold)]"
+                : "border-muted bg-muted/30"
+            }`}
+          >
+            <p className={`text-sm font-semibold mb-2 ${winner === "B" ? "text-[var(--gold)]" : "text-muted-foreground"}`}>
+              EQUIPE B
+            </p>
+            <p className={`text-xl font-bold ${winner === "B" ? "text-[var(--gold)]" : "text-foreground"}`}>
+              {equipes.B}
+            </p>
+          </div>
+        </div>
+
+        {/* Resultado */}
+        {winner && !isDrawing && (
+          <div className="mb-8 p-4 rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)]">
+            <p className="text-[var(--gold)] font-semibold">
+              {equipes[winner]} começa escolhendo! 🎯
+            </p>
+          </div>
+        )}
+
+        {/* Botão */}
+        <Button
+          onClick={handleDraw}
+          disabled={isDrawing}
+          className="w-full bg-[var(--gold)] text-black hover:bg-[var(--gold)]/90 font-semibold"
+        >
+          {isDrawing ? "Sorteando..." : winner ? "Continuar" : "Sortear"}
+        </Button>
+      </div>
+    </main>
+  );
+}
+
 
 function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
   const navigate = useNavigate();
