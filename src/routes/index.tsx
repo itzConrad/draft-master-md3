@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Veto de Mapas Valorant — MD3" },
-      { name: "description", content: "Conduza picks e bans de uma série MD3 de Valorant com o pool completo de 11 mapas." },
+      { name: "description", content: "Conduza picks e bans de uma série MD3 de Valorant com o pool completo de 12 mapas." },
     ],
   }),
   component: SetupPage,
@@ -27,8 +27,10 @@ function SetupPage() {
     e.preventDefault();
     if (!a.trim() || !b.trim()) return;
     clearVetoStorage();
+    // Limpar também o resultado do sorteio anterior
+    sessionStorage.removeItem("valorant-veto-draw-v1");
     sessionStorage.setItem(SETUP_KEY, JSON.stringify({ A: a.trim(), B: b.trim() }));
-    navigate({ to: "/veto" });
+    navigate({ to: "/mode" });
   };
 
   return (
@@ -73,6 +75,14 @@ function SetupPage() {
               Iniciar Veto
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            <a
+              href="/visualizacao"
+              className="text-sm text-muted-foreground hover:text-[var(--gold)] transition-colors"
+            >
+              📊 Ver Visualização (se existir veto salvo)
+            </a>
+          </div>
         </CardContent>
       </Card>
     </main>

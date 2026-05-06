@@ -1,10 +1,15 @@
 export type MapName =
   | "Bind" | "Haven" | "Split" | "Ascent" | "Icebox"
-  | "Breeze" | "Fracture" | "Pearl" | "Lotus" | "Sunset" | "Abyss";
+  | "Breeze" | "Fracture" | "Pearl" | "Lotus" | "Sunset" | "Abyss" | "Corrode";
 
 export const MAP_POOL: MapName[] = [
   "Bind", "Haven", "Split", "Ascent", "Icebox",
-  "Breeze", "Fracture", "Pearl", "Lotus", "Sunset", "Abyss",
+  "Breeze", "Fracture", "Pearl", "Lotus", "Sunset", "Abyss", "Corrode",
+];
+
+// Mapas da rotação competitiva atual (VCT 2024)
+export const COMPETITIVE_ROTATION: MapName[] = [
+  "Ascent", "Breeze", "Fracture", "Haven", "Lotus", "Pearl", "Split"
 ];
 
 // Splash arts hospedadas no CDN da Riot (valorant-api.com)
@@ -20,4 +25,5 @@ export const MAP_IMAGES: Record<MapName, string> = {
   Lotus: "https://media.valorant-api.com/maps/2fe4ed3a-450a-948b-6d6b-e89a78e680a9/splash.png",
   Sunset: "https://media.valorant-api.com/maps/92584fbe-486a-b1b2-9faa-39b0f486b498/splash.png",
   Abyss: "https://media.valorant-api.com/maps/224b0a95-48b9-f703-1bd8-67aca101a61f/splash.png",
+  Corrode: "https://media.valorant-api.com/maps/1c18ab1f-420d-0d8b-71d0-77ad3c439115/splash.png",
 };

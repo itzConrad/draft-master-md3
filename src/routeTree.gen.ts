@@ -9,12 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VisualizacaoRouteImport } from './routes/visualizacao'
 import { Route as VetoRouteImport } from './routes/veto'
+import { Route as ModeRouteImport } from './routes/mode'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VisualizacaoRoute = VisualizacaoRouteImport.update({
+  id: '/visualizacao',
+  path: '/visualizacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VetoRoute = VetoRouteImport.update({
   id: '/veto',
   path: '/veto',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModeRoute = ModeRouteImport.update({
+  id: '/mode',
+  path: '/mode',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,37 +37,59 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
+  '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
+  '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
+  '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/veto'
+  fullPaths: '/' | '/mode' | '/veto' | '/visualizacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/veto'
-  id: '__root__' | '/' | '/veto'
+  to: '/' | '/mode' | '/veto' | '/visualizacao'
+  id: '__root__' | '/' | '/mode' | '/veto' | '/visualizacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ModeRoute: typeof ModeRoute
   VetoRoute: typeof VetoRoute
+  VisualizacaoRoute: typeof VisualizacaoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/visualizacao': {
+      id: '/visualizacao'
+      path: '/visualizacao'
+      fullPath: '/visualizacao'
+      preLoaderRoute: typeof VisualizacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/veto': {
       id: '/veto'
       path: '/veto'
       fullPath: '/veto'
       preLoaderRoute: typeof VetoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mode': {
+      id: '/mode'
+      path: '/mode'
+      fullPath: '/mode'
+      preLoaderRoute: typeof ModeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,7 +104,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ModeRoute: ModeRoute,
   VetoRoute: VetoRoute,
+  VisualizacaoRoute: VisualizacaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

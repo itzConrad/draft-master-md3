@@ -18,11 +18,11 @@ function load(): VetoState | null {
   }
 }
 
-export function useVeto(equipes: { A: string; B: string } | null) {
+export function useVeto(equipes: { A: string; B: string } | null, modo: "competitive" | "all" = "all") {
   const [state, dispatch] = useReducer(
     vetoReducer,
     null,
-    () => load() ?? createInitialState(equipes ?? { A: "Equipe A", B: "Equipe B" }),
+    () => load() ?? createInitialState(equipes ?? { A: "Equipe A", B: "Equipe B" }, modo),
   );
 
   useEffect(() => {
