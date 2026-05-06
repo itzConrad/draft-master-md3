@@ -31,6 +31,7 @@ export interface VetoState {
   picks: { mapa1: PickInfo; mapa2: PickInfo; mapa3: PickInfo };
   faseAtual: number;
   modal: ModalState | null;
+  equipeQueComeça: "A" | "B"; // resultado do sorteio
 }
 
 export type FaseTipo = "BAN" | "PICK" | "LADO" | "FIM";
@@ -79,6 +80,14 @@ export function getFases(modo: "competitive" | "all"): Fase[] {
   return modo === "competitive" ? FASES_COMPETITIVO : FASES_COMPLETO;
 }
 
+// Função para remapear equipe de uma fase baseado em quem começou
+export function remapearEquipeFase(equipe: Equipe | null, equipeQueComeça: "A" | "B"): Equipe | null {
+  if (!equipe) return null;
+  if (equipeQueComeça === "A") return equipe; // sem remapeamento
+  // Se B começou, inverte: A↔B
+  return equipe === "A" ? "B" : "A";
+}
+
 // Mantém compatibilidade com código existente
 export const FASES = FASES_COMPLETO;
 
@@ -91,12 +100,13 @@ export function getTotalFases(modo: "competitive" | "all"): number {
 
 function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): VetoState {
   const fase = getFases(state.modo)[proximaFase];
+  const equipeNaFase = remapearEquipeFase(fase?.equipe ?? null, state.equipeQueComeça);
 
   if (
     !fase ||
     fase.tipo !== "LADO" ||
     fase.pickKey !== "mapa3" ||
-    !fase.equipe ||
+    !equipeNaFase ||
     state.picks.mapa3.nome
   ) {
     return { ...state, faseAtual: proximaFase };
@@ -114,7 +124,7 @@ function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): Vet
     return { ...state, faseAtual: proximaFase };
   }
 
-  const oponente: Equipe = fase.equipe === "A" ? "B" : "A";
+  const oponente: Equipe = equipeNaFase === "A" ? "B" : "A";
 
   return {
     ...state,
@@ -124,7 +134,7 @@ function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): Vet
     },
     faseAtual: proximaFase,
     modal: {
-      paraEquipe: fase.equipe,
+      paraEquipe: equipeNaFase,
       oponente,
       mapa: decider,
       pickKey: "mapa3",
@@ -132,7 +142,7 @@ function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): Vet
   };
 }
 
-export function createInitialState(equipes: { A: string; B: string }, modo: "competitive" | "all" = "all"): VetoState {
+export function createInitialState(equipes: { A: string; B: string }, modo: "competitive" | "all" = "all", equipeQueComeça: "A" | "B" = "A"): VetoState {
   const empty: PickInfo = {
     nome: null,
     escolhidoPor: null,
@@ -142,6 +152,7 @@ export function createInitialState(equipes: { A: string; B: string }, modo: "com
   return {
     equipes,
     modo,
+    equipeQueComeça,
     mapasBanidos: [],
     picks: {
       mapa1: { ...empty },
@@ -165,22 +176,29 @@ export function mapasDisponiveis(state: VetoState): MapName[] {
 }
 
 export type Action =
-  | { type: "BAN_MAP"; mapa: MapName }
-  | { type: "PICK_MAP"; mapa: MapName }
-  | { type: "CHOOSE_SIDE"; lado: "ataque" | "defesa" }
+  | { type: "BAN_MAP"; mapa: MapName; equipe?: Equipe }
+  | { type: "PICK_MAP"; mapa: MapName; equipe?: Equipe }
+  | { type: "CHOOSE_SIDE"; lado: "ataque" | "defesa"; equipe?: Equipe }
+  | { type: "HYDRATE"; state: VetoState }
   | { type: "RESET" };
 
 export function vetoReducer(state: VetoState, action: Action): VetoState {
   const fases = getFases(state.modo);
 
   switch (action.type) {
+    case "HYDRATE":
+      return action.state;
+
     case "RESET":
-      return createInitialState(state.equipes, state.modo);
+      return createInitialState(state.equipes, state.modo, state.equipeQueComeça);
 
     case "BAN_MAP": {
       const fase = fases[state.faseAtual];
-      if (fase.tipo !== "BAN" || !fase.equipe) return state;
-      const novosBans = [...state.mapasBanidos, { nome: action.mapa, banidoPor: fase.equipe }];
+      const equipeNaFase = remapearEquipeFase(fase.equipe, state.equipeQueComeça);
+      if (fase.tipo !== "BAN" || !equipeNaFase) return state;
+      if (action.equipe && action.equipe !== equipeNaFase) return state;
+      if (!mapasDisponiveis(state).includes(action.mapa)) return state;
+      const novosBans = [...state.mapasBanidos, { nome: action.mapa, banidoPor: equipeNaFase }];
       const proximaFase = state.faseAtual + 1;
 
       // Após último ban, promover decider automaticamente
@@ -189,12 +207,15 @@ export function vetoReducer(state: VetoState, action: Action): VetoState {
 
     case "PICK_MAP": {
       const fase = fases[state.faseAtual];
-      if (fase.tipo !== "PICK" || !fase.equipe || !fase.pickKey) return state;
-      const oponente: Equipe = fase.equipe === "A" ? "B" : "A";
+      const equipeNaFase = remapearEquipeFase(fase.equipe, state.equipeQueComeça);
+      if (fase.tipo !== "PICK" || !equipeNaFase || !fase.pickKey) return state;
+      if (action.equipe && action.equipe !== equipeNaFase) return state;
+      if (!mapasDisponiveis(state).includes(action.mapa)) return state;
+      const oponente: Equipe = equipeNaFase === "A" ? "B" : "A";
       const pickAtualizado: PickInfo = {
         ...state.picks[fase.pickKey],
         nome: action.mapa,
-        escolhidoPor: fase.equipe,
+        escolhidoPor: equipeNaFase,
       };
       return {
         ...state,
@@ -202,7 +223,7 @@ export function vetoReducer(state: VetoState, action: Action): VetoState {
         faseAtual: state.faseAtual + 1,
         modal: {
           paraEquipe: oponente,
-          oponente: fase.equipe,
+          oponente: equipeNaFase,
           mapa: action.mapa,
           pickKey: fase.pickKey,
         },
@@ -212,6 +233,7 @@ export function vetoReducer(state: VetoState, action: Action): VetoState {
     case "CHOOSE_SIDE": {
       if (!state.modal) return state;
       const { paraEquipe, oponente, pickKey } = state.modal;
+      if (action.equipe && action.equipe !== paraEquipe) return state;
       const ladoOposto = action.lado === "ataque" ? "defesa" : "ataque";
       const pick = state.picks[pickKey];
       const atualizado: PickInfo = {

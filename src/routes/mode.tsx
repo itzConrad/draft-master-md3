@@ -26,7 +26,7 @@ function ModeSelectionPage() {
     if (!selectedMode) return;
 
     // Salvar o modo selecionado
-    sessionStorage.setItem(MODE_KEY, selectedMode);
+    localStorage.setItem(MODE_KEY, selectedMode);
     navigate({ to: "/veto" });
   };
 
