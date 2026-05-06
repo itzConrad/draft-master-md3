@@ -13,6 +13,7 @@ import { Route as VisualizacaoRouteImport } from './routes/visualizacao'
 import { Route as VetoRouteImport } from './routes/veto'
 import { Route as ModeRouteImport } from './routes/mode'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TeamSideRouteImport } from './routes/team.$side'
 
 const VisualizacaoRoute = VisualizacaoRouteImport.update({
   id: '/visualizacao',
@@ -34,18 +35,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamSideRoute = TeamSideRouteImport.update({
+  id: '/team/$side',
+  path: '/team/$side',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
+  '/team/$side': typeof TeamSideRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
+  '/team/$side': typeof TeamSideRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
+  '/team/$side': typeof TeamSideRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mode' | '/veto' | '/visualizacao'
+  fullPaths: '/' | '/mode' | '/veto' | '/visualizacao' | '/team/$side'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mode' | '/veto' | '/visualizacao'
-  id: '__root__' | '/' | '/mode' | '/veto' | '/visualizacao'
+  to: '/' | '/mode' | '/veto' | '/visualizacao' | '/team/$side'
+  id: '__root__' | '/' | '/mode' | '/veto' | '/visualizacao' | '/team/$side'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   ModeRoute: typeof ModeRoute
   VetoRoute: typeof VetoRoute
   VisualizacaoRoute: typeof VisualizacaoRoute
+  TeamSideRoute: typeof TeamSideRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/team/$side': {
+      id: '/team/$side'
+      path: '/team/$side'
+      fullPath: '/team/$side'
+      preLoaderRoute: typeof TeamSideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModeRoute: ModeRoute,
   VetoRoute: VetoRoute,
   VisualizacaoRoute: VisualizacaoRoute,
+  TeamSideRoute: TeamSideRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

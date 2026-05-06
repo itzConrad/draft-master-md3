@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MapCard } from "@/components/veto/MapCard";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useVeto, clearVetoStorage } from "@/hooks/useVeto";
-import { mapasDisponiveis, FASES, getFases, getTotalFases } from "@/lib/vetoMachine";
+import { FASES, getFases, getTotalFases, remapearEquipeFase } from "@/lib/vetoMachine";
 import { MAP_POOL, COMPETITIVE_ROTATION, type MapName, MAP_IMAGES } from "@/lib/maps";
 
 const SETUP_KEY = "valorant-veto-equipes-v1";
@@ -28,8 +27,8 @@ function VetoPage() {
   const [showDraw, setShowDraw] = useState(false);
 
   useEffect(() => {
-    const rawEquipes = sessionStorage.getItem(SETUP_KEY);
-    const rawModo = sessionStorage.getItem(MODE_KEY);
+    const rawEquipes = localStorage.getItem(SETUP_KEY) ?? sessionStorage.getItem(SETUP_KEY);
+    const rawModo = localStorage.getItem(MODE_KEY) ?? sessionStorage.getItem(MODE_KEY);
     
     if (!rawEquipes) {
       navigate({ to: "/" });
@@ -49,7 +48,7 @@ function VetoPage() {
       setModo(parsedModo);
       
       // Verificar se já existe um sorteio salvo
-      const existingDraw = sessionStorage.getItem(DRAW_KEY);
+      const existingDraw = localStorage.getItem(DRAW_KEY) ?? sessionStorage.getItem(DRAW_KEY);
       if (!existingDraw || existingDraw.trim() === "") {
         // Se não existe, mostrar a tela de sorteio
         setShowDraw(true);
@@ -91,7 +90,7 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
       setShowResult(true);
 
       // Salvar resultado do sorteio
-      sessionStorage.setItem(DRAW_KEY, finalWinner);
+      localStorage.setItem(DRAW_KEY, finalWinner);
     }, 2000);
   };
 
@@ -162,28 +161,25 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
 
 function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; modo: "competitive" | "all" }) {
   const navigate = useNavigate();
-  const { state, dispatch } = useVeto(equipes, modo);
+  
+  // Ler resultado do sorteio
+  const drawResult = (typeof window !== "undefined" 
+    ? localStorage.getItem(DRAW_KEY) ?? sessionStorage.getItem(DRAW_KEY) 
+    : null) as "A" | "B" | null;
+  
+  const equipeQueComeça = drawResult ?? "A";
+  
+  const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça);
 
   const fases = getFases(modo);
   const fase = fases[state.faseAtual];
-  const mapasDisp = mapasDisponiveis(state);
-
-  const handleMapClick = (mapa: MapName) => {
-    if (fase.tipo === "BAN") {
-      dispatch({ type: "BAN_MAP", mapa });
-    } else if (fase.tipo === "PICK") {
-      dispatch({ type: "PICK_MAP", mapa });
-    }
-  };
-
-  const handleSideChoice = (lado: "ataque" | "defesa") => {
-    dispatch({ type: "CHOOSE_SIDE", lado });
-  };
 
   const handleReset = () => {
     if (confirm("Deseja recomeçar o veto?")) {
       clearVetoStorage();
       // Limpar também o resultado do sorteio e modo selecionado
+      localStorage.removeItem(DRAW_KEY);
+      localStorage.removeItem(MODE_KEY);
       sessionStorage.removeItem(DRAW_KEY);
       sessionStorage.removeItem(MODE_KEY);
       dispatch({ type: "RESET" });
@@ -195,6 +191,7 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
   const handleGoHome = () => {
     clearVetoStorage();
     // Limpar também o modo selecionado
+    localStorage.removeItem(MODE_KEY);
     sessionStorage.removeItem(MODE_KEY);
     navigate({ to: "/" });
   };
@@ -363,6 +360,12 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
             </p>
           </div>
           <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a href="/team/a">Equipe A</a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a href="/team/b">Equipe B</a>
+            </Button>
             <Button onClick={handleReset} variant="ghost" size="sm">
               Recomeçar
             </Button>
@@ -381,9 +384,9 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground font-semibold">
-                {fase.tipo === "BAN" && `${state.equipes[fase.equipe!]} BANE`}
-                {fase.tipo === "PICK" && `${state.equipes[fase.equipe!]} ESCOLHE`}
-                {fase.tipo === "LADO" && `${state.equipes[fase.equipe!]} ESCOLHE LADO`}
+                {fase.tipo === "BAN" && `${state.equipes[remapearEquipeFase(fase.equipe, state.equipeQueComeça)!]} BANE`}
+                {fase.tipo === "PICK" && `${state.equipes[remapearEquipeFase(fase.equipe, state.equipeQueComeça)!]} ESCOLHE`}
+                {fase.tipo === "LADO" && `${state.equipes[remapearEquipeFase(fase.equipe, state.equipeQueComeça)!]} ESCOLHE LADO`}
               </p>
             </div>
             <div className="text-right">
@@ -394,35 +397,13 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
         </div>
       </header>
 
-      {/* Modal de escolha de lado */}
       {state.modal && fase.tipo === "LADO" && (
-        <Dialog open={true}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Escolher Lado</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {state.equipes[state.modal.paraEquipe]}, escolha o lado para{" "}
-                <strong>{state.modal.mapa}</strong>:
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => handleSideChoice("ataque")}
-                  className="flex-1 bg-[var(--navy)] text-[var(--gold)] hover:bg-[var(--navy)]/90"
-                >
-                  Ataque
-                </Button>
-                <Button
-                  onClick={() => handleSideChoice("defesa")}
-                  className="flex-1 bg-[var(--gold)] text-black hover:bg-[var(--gold)]/90"
-                >
-                  Defesa
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="mb-6 rounded-lg border border-[var(--gold)]/40 bg-[var(--gold)]/10 p-4 text-center">
+          <p className="text-sm font-semibold text-[var(--gold)]">
+            Aguardando {state.equipes[state.modal.paraEquipe]} escolher o lado de{" "}
+            <strong>{state.modal.mapa}</strong> na tela da equipe.
+          </p>
+        </div>
       )}
 
       {/* Grid de mapas */}
@@ -450,8 +431,6 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
               pickLabel = "Decider";
             }
 
-            const disabled = fase.tipo === "LADO" || (fase.tipo !== "BAN" && fase.tipo !== "PICK");
-
             return (
               <MapCard
                 key={mapa}
@@ -459,8 +438,7 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
                 status={status}
                 pickLabel={pickLabel}
                 banidoPor={ban ? state.equipes[ban.banidoPor] : undefined}
-                onClick={() => handleMapClick(mapa)}
-                disabled={disabled || !mapasDisp.includes(mapa)}
+                disabled={true}
               />
             );
           })}
@@ -511,19 +489,13 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
           </div>
         </div>
 
-        {/* Mapas disponíveis */}
+        {/* Modo admin */}
         <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-sm mb-2">Disponíveis ({mapasDisp.length})</h3>
+          <h3 className="font-semibold text-sm mb-2">Modo admin</h3>
           <div className="flex flex-wrap gap-1">
-            {mapasDisp.length === 0 ? (
-              <p className="text-xs text-muted-foreground">—</p>
-            ) : (
-              mapasDisp.map((mapa) => (
-                <span key={mapa} className="bg-muted px-2 py-1 rounded text-xs">
-                  {mapa}
-                </span>
-              ))
-            )}
+            <p className="text-xs text-muted-foreground">
+              Esta tela acompanha o veto. As escolhas sao feitas apenas em /team/a e /team/b.
+            </p>
           </div>
         </div>
       </div>
