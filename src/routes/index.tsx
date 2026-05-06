@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Veto de Mapas Valorant — MD3" },
-      { name: "description", content: "Conduza picks e bans de uma série MD3 de Valorant com o pool completo de 11 mapas." },
+      { name: "description", content: "Conduza picks e bans de uma série MD3 de Valorant com o pool completo de 12 mapas." },
     ],
   }),
   component: SetupPage,
@@ -30,7 +30,7 @@ function SetupPage() {
     // Limpar também o resultado do sorteio anterior
     sessionStorage.removeItem("valorant-veto-draw-v1");
     sessionStorage.setItem(SETUP_KEY, JSON.stringify({ A: a.trim(), B: b.trim() }));
-    navigate({ to: "/veto" });
+    navigate({ to: "/mode" });
   };
 
   return (

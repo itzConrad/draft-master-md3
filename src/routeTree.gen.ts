@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VisualizacaoRouteImport } from './routes/visualizacao'
 import { Route as VetoRouteImport } from './routes/veto'
+import { Route as ModeRouteImport } from './routes/mode'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VisualizacaoRoute = VisualizacaoRouteImport.update({
@@ -23,6 +24,11 @@ const VetoRoute = VetoRouteImport.update({
   path: '/veto',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModeRoute = ModeRouteImport.update({
+  id: '/mode',
+  path: '/mode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/mode': typeof ModeRoute
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/veto' | '/visualizacao'
+  fullPaths: '/' | '/mode' | '/veto' | '/visualizacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/veto' | '/visualizacao'
-  id: '__root__' | '/' | '/veto' | '/visualizacao'
+  to: '/' | '/mode' | '/veto' | '/visualizacao'
+  id: '__root__' | '/' | '/mode' | '/veto' | '/visualizacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ModeRoute: typeof ModeRoute
   VetoRoute: typeof VetoRoute
   VisualizacaoRoute: typeof VisualizacaoRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VetoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mode': {
+      id: '/mode'
+      path: '/mode'
+      fullPath: '/mode'
+      preLoaderRoute: typeof ModeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ModeRoute: ModeRoute,
   VetoRoute: VetoRoute,
   VisualizacaoRoute: VisualizacaoRoute,
 }

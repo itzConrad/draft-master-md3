@@ -4,10 +4,11 @@ import { MapCard } from "@/components/veto/MapCard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useVeto, clearVetoStorage } from "@/hooks/useVeto";
-import { mapasDisponiveis, FASES } from "@/lib/vetoMachine";
-import { MAP_POOL, type MapName, MAP_IMAGES } from "@/lib/maps";
+import { mapasDisponiveis, FASES, getFases, getTotalFases } from "@/lib/vetoMachine";
+import { MAP_POOL, COMPETITIVE_ROTATION, type MapName, MAP_IMAGES } from "@/lib/maps";
 
 const SETUP_KEY = "valorant-veto-equipes-v1";
+const MODE_KEY = "valorant-veto-mode-v1";
 const DRAW_KEY = "valorant-veto-draw-v1";
 
 export const Route = createFileRoute("/veto")({
@@ -23,17 +24,29 @@ export const Route = createFileRoute("/veto")({
 function VetoPage() {
   const navigate = useNavigate();
   const [equipes, setEquipes] = useState<{ A: string; B: string } | null>(null);
+  const [modo, setModo] = useState<"competitive" | "all" | null>(null);
   const [showDraw, setShowDraw] = useState(false);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(SETUP_KEY);
-    if (!raw) {
+    const rawEquipes = sessionStorage.getItem(SETUP_KEY);
+    const rawModo = sessionStorage.getItem(MODE_KEY);
+    
+    if (!rawEquipes) {
       navigate({ to: "/" });
       return;
     }
+    
+    if (!rawModo) {
+      navigate({ to: "/mode" });
+      return;
+    }
+    
     try {
-      const parsedEquipes = JSON.parse(raw);
+      const parsedEquipes = JSON.parse(rawEquipes);
+      const parsedModo = rawModo as "competitive" | "all";
+      
       setEquipes(parsedEquipes);
+      setModo(parsedModo);
       
       // Verificar se já existe um sorteio salvo
       const existingDraw = sessionStorage.getItem(DRAW_KEY);
@@ -46,13 +59,13 @@ function VetoPage() {
     }
   }, [navigate]);
 
-  if (!equipes) return null;
+  if (!equipes || !modo) return null;
 
   if (showDraw) {
     return <DrawScreen equipes={equipes} onDrawComplete={() => setShowDraw(false)} />;
   }
 
-  return <VetoContent equipes={equipes} />;
+  return <VetoContent equipes={equipes} modo={modo} />;
 }
 
 function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: string }; onDrawComplete: () => void }) {
@@ -147,12 +160,12 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
   );
 }
 
-
-function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
+function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; modo: "competitive" | "all" }) {
   const navigate = useNavigate();
-  const { state, dispatch } = useVeto(equipes);
+  const { state, dispatch } = useVeto(equipes, modo);
 
-  const fase = FASES[state.faseAtual];
+  const fases = getFases(modo);
+  const fase = fases[state.faseAtual];
   const mapasDisp = mapasDisponiveis(state);
 
   const handleMapClick = (mapa: MapName) => {
@@ -170,8 +183,9 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
   const handleReset = () => {
     if (confirm("Deseja recomeçar o veto?")) {
       clearVetoStorage();
-      // Limpar também o resultado do sorteio
+      // Limpar também o resultado do sorteio e modo selecionado
       sessionStorage.removeItem(DRAW_KEY);
+      sessionStorage.removeItem(MODE_KEY);
       dispatch({ type: "RESET" });
       // Recarregar a página para reiniciar o sorteio
       window.location.reload();
@@ -180,11 +194,13 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
 
   const handleGoHome = () => {
     clearVetoStorage();
+    // Limpar também o modo selecionado
+    sessionStorage.removeItem(MODE_KEY);
     navigate({ to: "/" });
   };
 
   // Fase final
-  if (state.faseAtual >= FASES.length - 1) {
+  if (state.faseAtual >= fases.length - 1) {
     return (
       <main className="min-h-screen bg-background p-4">
         <div className="max-w-6xl mx-auto">
@@ -312,7 +328,7 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
                 <div className="text-sm text-muted-foreground">Mapas Banidos</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-[var(--navy)] mb-1">11</div>
+                <div className="text-2xl font-bold text-[var(--navy)] mb-1">{modo === "competitive" ? 7 : 12}</div>
                 <div className="text-sm text-muted-foreground">Pool Total</div>
               </div>
             </div>
@@ -343,7 +359,7 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
           <div>
             <h1 className="text-3xl font-bold uppercase tracking-wider">Veto MD3</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Fase {state.faseAtual + 1} de {FASES.length - 1}
+              Fase {state.faseAtual + 1} de {fases.length - 1}
             </p>
           </div>
           <div className="flex gap-2">
@@ -412,7 +428,7 @@ function VetoContent({ equipes }: { equipes: { A: string; B: string } }) {
       {/* Grid de mapas */}
       <div className="flex-1">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 mb-8">
-          {MAP_POOL.map((mapa) => {
+          {(modo === "competitive" ? COMPETITIVE_ROTATION : MAP_POOL).map((mapa) => {
             const ban = state.mapasBanidos.find((b) => b.nome === mapa);
             const pick1 = state.picks.mapa1.nome === mapa;
             const pick2 = state.picks.mapa2.nome === mapa;
