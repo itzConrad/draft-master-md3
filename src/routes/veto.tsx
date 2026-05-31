@@ -13,8 +13,8 @@ const DRAW_KEY = "valorant-veto-draw-v1";
 export const Route = createFileRoute("/veto")({
   head: () => ({
     meta: [
-      { title: "Veto de Mapas — MD3" },
-      { name: "description", content: "Conduza picks e bans de uma série MD3 de Valorant." },
+      { title: "Veto de Mapas" },
+      { name: "description", content: "Conduza picks e bans de uma série de Valorant." },
     ],
   }),
   component: VetoPage,
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/veto")({
 function VetoPage() {
   const navigate = useNavigate();
   const [equipes, setEquipes] = useState<{ A: string; B: string } | null>(null);
-  const [modo, setModo] = useState<"competitive" | "all" | null>(null);
+  const [modo, setModo] = useState<"md1-competitive" | "md1-all" | "md3-competitive" | "md3-all" | null>(null);
   const [showDraw, setShowDraw] = useState(false);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ function VetoPage() {
     
     try {
       const parsedEquipes = JSON.parse(rawEquipes);
-      const parsedModo = rawModo as "competitive" | "all";
+      const parsedModo = rawModo as "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all";
       
       setEquipes(parsedEquipes);
       setModo(parsedModo);
@@ -159,7 +159,7 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
   );
 }
 
-function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; modo: "competitive" | "all" }) {
+function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all" }) {
   const navigate = useNavigate();
   
   // Ler resultado do sorteio
@@ -207,7 +207,7 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
               Veto Finalizado
             </h1>
             <p className="text-muted-foreground text-lg">
-              Série MD3 configurada com sucesso! 🎯
+              Série {modo.startsWith("md1") ? "MD1" : "MD3"} configurada com sucesso! 🎯
             </p>
             <div className="mt-4 text-sm text-muted-foreground">
               {equipes.A} vs {equipes.B}
@@ -217,8 +217,10 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
           {/* Mapas Selecionados */}
           <div className="mb-8 animate-scale-in delay-200">
             <h2 className="text-2xl font-bold uppercase tracking-wide mb-6 text-center">Mapas da Série</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.entries(state.picks).map(([key, pick], index) => (
+            <div className={`grid gap-6 ${modo.startsWith("md1") ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"}`}>
+              {Object.entries(state.picks)
+                .filter(([key]) => modo.startsWith("md1") ? key === "mapa3" : true)
+                .map(([key, pick], index) => (
                 <div key={key} className={`group animate-slide-up delay-${(index + 1) * 100}`}>
                   <div className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 ${
                     key === "mapa3"
@@ -314,18 +316,20 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
 
           {/* Resumo da Série */}
           <div className="bg-muted/30 rounded-xl p-6 mb-8 animate-scale-in delay-700">
-            <h2 className="text-xl font-bold uppercase tracking-wide mb-4 text-center">Resumo da Série MD3</h2>
+            <h2 className="text-xl font-bold uppercase tracking-wide mb-4 text-center">
+              Resumo da Série {modo.startsWith("md1") ? "MD1" : "MD3"}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-[var(--gold)] mb-1">3</div>
-                <div className="text-sm text-muted-foreground">Mapas Selecionados</div>
+                <div className="text-2xl font-bold text-[var(--gold)] mb-1">{modo.startsWith("md1") ? 1 : 3}</div>
+                <div className="text-sm text-muted-foreground">Mapa(s) Decidido(s)</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-red-500 mb-1">{state.mapasBanidos.length}</div>
                 <div className="text-sm text-muted-foreground">Mapas Banidos</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-[var(--navy)] mb-1">{modo === "competitive" ? 7 : 12}</div>
+                <div className="text-2xl font-bold text-[var(--navy)] mb-1">{modo.includes("competitive") ? 7 : 12}</div>
                 <div className="text-sm text-muted-foreground">Pool Total</div>
               </div>
             </div>
@@ -350,15 +354,17 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
 
   return (
     <main className="flex min-h-screen flex-col bg-background p-4">
-      {/* Header */}
-      <header className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold uppercase tracking-wider">Veto MD3</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Fase {state.faseAtual + 1} de {fases.length - 1}
-            </p>
-          </div>
+          {/* Header */}
+          <header className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold uppercase tracking-wider">
+                  Veto {modo.startsWith("md1") ? "MD1" : "MD3"}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Fase {state.faseAtual + 1} de {fases.length - 1}
+                </p>
+              </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm">
               <a href="/team/a">Equipe A</a>
@@ -409,39 +415,42 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
       {/* Grid de mapas */}
       <div className="flex-1">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 mb-8">
-          {(modo === "competitive" ? COMPETITIVE_ROTATION : MAP_POOL).map((mapa) => {
-            const ban = state.mapasBanidos.find((b) => b.nome === mapa);
-            const pick1 = state.picks.mapa1.nome === mapa;
-            const pick2 = state.picks.mapa2.nome === mapa;
-            const pick3 = state.picks.mapa3.nome === mapa;
+          {(() => {
+            const isCompetitivo = modo.includes("competitive");
+            return (isCompetitivo ? COMPETITIVE_ROTATION : MAP_POOL).map((mapa) => {
+              const ban = state.mapasBanidos.find((b) => b.nome === mapa);
+              const pick1 = state.picks.mapa1.nome === mapa;
+              const pick2 = state.picks.mapa2.nome === mapa;
+              const pick3 = state.picks.mapa3.nome === mapa;
 
-            let status: "disponivel" | "banido" | "pick" | "decider" = "disponivel";
-            let pickLabel: string | undefined;
+              let status: "disponivel" | "banido" | "pick" | "decider" = "disponivel";
+              let pickLabel: string | undefined;
 
-            if (ban) {
-              status = "banido";
-            } else if (pick1) {
-              status = "pick";
-              pickLabel = "Mapa 1";
-            } else if (pick2) {
-              status = "pick";
-              pickLabel = "Mapa 2";
-            } else if (pick3) {
-              status = "decider";
-              pickLabel = "Decider";
-            }
+              if (ban) {
+                status = "banido";
+              } else if (pick1) {
+                status = "pick";
+                pickLabel = "Mapa 1";
+              } else if (pick2) {
+                status = "pick";
+                pickLabel = "Mapa 2";
+              } else if (pick3) {
+                status = "decider";
+                pickLabel = "Decider";
+              }
 
-            return (
-              <MapCard
-                key={mapa}
-                mapa={mapa}
-                status={status}
-                pickLabel={pickLabel}
-                banidoPor={ban ? state.equipes[ban.banidoPor] : undefined}
-                disabled={true}
-              />
-            );
-          })}
+              return (
+                <MapCard
+                  key={mapa}
+                  mapa={mapa}
+                  status={status}
+                  pickLabel={pickLabel}
+                  banidoPor={ban ? state.equipes[ban.banidoPor] : undefined}
+                  disabled={true}
+                />
+              );
+            });
+          })()}
         </div>
       </div>
 

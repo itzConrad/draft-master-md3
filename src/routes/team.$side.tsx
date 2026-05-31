@@ -22,13 +22,13 @@ function readSetup() {
   const rawModo = localStorage.getItem(MODE_KEY) ?? sessionStorage.getItem(MODE_KEY);
   const rawDraw = localStorage.getItem(DRAW_KEY) ?? sessionStorage.getItem(DRAW_KEY);
 
-  if (!rawEquipes || !rawModo) return null;
+  if (!rawEquipes || !rawModo || (rawDraw !== "A" && rawDraw !== "B")) return null;
 
   try {
     return {
       equipes: JSON.parse(rawEquipes) as { A: string; B: string },
-      modo: rawModo as "competitive" | "all",
-      equipeQueComeça: (rawDraw as "A" | "B") ?? "A",
+      modo: rawModo as "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all",
+      equipeQueComeça: rawDraw,
     };
   } catch {
     return null;
@@ -43,7 +43,22 @@ function TeamVetoPage() {
   const [setup, setSetup] = useState<ReturnType<typeof readSetup>>(null);
 
   useEffect(() => {
-    setSetup(readSetup());
+    const updateSetup = () => setSetup(readSetup());
+    updateSetup();
+
+    const onStorage = (event: StorageEvent) => {
+      if ([SETUP_KEY, MODE_KEY, DRAW_KEY].includes(event.key ?? "")) {
+        updateSetup();
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", updateSetup);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", updateSetup);
+    };
   }, []);
 
   if (!isValidSide) {
@@ -66,7 +81,7 @@ function TeamVetoPage() {
         <div className="max-w-md rounded-lg border border-border bg-card p-6 text-center">
           <h1 className="text-2xl font-bold uppercase tracking-wide">Veto nao iniciado</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Cadastre as equipes e escolha o modo antes de abrir as telas remotas.
+            Cadastre as equipes, escolha o modo e conclua o sorteio antes de abrir as telas remotas.
           </p>
           <Button asChild className="mt-5 bg-[var(--gold)] text-black hover:bg-[var(--gold)]/90">
             <Link to="/">Configurar veto</Link>
@@ -87,14 +102,14 @@ function TeamVetoContent({
 }: {
   teamSide: Equipe;
   equipes: { A: string; B: string };
-  modo: "competitive" | "all";
+  modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all";
   equipeQueComeça: "A" | "B";
 }) {
   const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça);
   const fases = getFases(state.modo);
   const fase = fases[state.faseAtual];
   const mapasDisp = mapasDisponiveis(state);
-  const pool = state.modo === "competitive" ? COMPETITIVE_ROTATION : MAP_POOL;
+  const pool = state.modo.includes("competitive") ? COMPETITIVE_ROTATION : MAP_POOL;
   const isFinished = state.faseAtual >= fases.length - 1 || fase?.tipo === "FIM";
   const equipeNaFase = remapearEquipeFase(fase?.equipe ?? null, state.equipeQueComeça);
   const isTeamTurn = Boolean(equipeNaFase && equipeNaFase === teamSide);
