@@ -26,7 +26,7 @@ export interface ModalState {
 
 export interface VetoState {
   equipes: { A: string; B: string };
-  modo: "competitive" | "all";
+  modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all";
   mapasBanidos: BanInfo[];
   picks: { mapa1: PickInfo; mapa2: PickInfo; mapa3: PickInfo };
   faseAtual: number;
@@ -42,8 +42,8 @@ export interface Fase {
   pickKey?: PickKey;
 }
 
-// Fases para modo completo (12 mapas)
-export const FASES_COMPLETO: Fase[] = [
+// MD3 - Fases para modo completo (12 mapas)
+export const FASES_MD3_COMPLETO: Fase[] = [
   { tipo: "BAN", equipe: "A" },                        // 0
   { tipo: "BAN", equipe: "B" },                        // 1
   { tipo: "PICK", equipe: "A", pickKey: "mapa1" },     // 2
@@ -61,8 +61,8 @@ export const FASES_COMPLETO: Fase[] = [
   { tipo: "FIM", equipe: null },                       // 14
 ];
 
-// Fases para modo competitivo (7 mapas)
-export const FASES_COMPETITIVO: Fase[] = [
+// MD3 - Fases para modo competitivo (7 mapas)
+export const FASES_MD3_COMPETITIVO: Fase[] = [
   { tipo: "BAN", equipe: "A" },                        // 0
   { tipo: "BAN", equipe: "B" },                        // 1
   { tipo: "BAN", equipe: "A" },                        // 2
@@ -75,9 +75,40 @@ export const FASES_COMPETITIVO: Fase[] = [
   { tipo: "FIM", equipe: null },                       // 9
 ];
 
+// MD1 - Fases para modo competitivo (7 mapas, 6 bans + decider)
+export const FASES_MD1_COMPETITIVO: Fase[] = [
+  { tipo: "BAN", equipe: "A" },                        // 0
+  { tipo: "BAN", equipe: "B" },                        // 1
+  { tipo: "BAN", equipe: "A" },                        // 2
+  { tipo: "BAN", equipe: "B" },                        // 3
+  { tipo: "BAN", equipe: "A" },                        // 4
+  { tipo: "BAN", equipe: "B" },                        // 5
+  { tipo: "LADO", equipe: "A", pickKey: "mapa3" },     // 6 (decider automático, quem começou escolhe lado)
+  { tipo: "FIM", equipe: null },                       // 7
+];
+
+// MD1 - Fases para modo completo (12 mapas, 6 bans + decider)
+export const FASES_MD1_COMPLETO: Fase[] = [
+  { tipo: "BAN", equipe: "A" },                        // 0
+  { tipo: "BAN", equipe: "B" },                        // 1
+  { tipo: "BAN", equipe: "A" },                        // 2
+  { tipo: "BAN", equipe: "B" },                        // 3
+  { tipo: "BAN", equipe: "A" },                        // 4
+  { tipo: "BAN", equipe: "B" },                        // 5
+  { tipo: "LADO", equipe: "A", pickKey: "mapa3" },     // 6 (decider automático, quem começou escolhe lado)
+  { tipo: "FIM", equipe: null },                       // 7
+];
+
+// Manter compatibilidade com código antigo
+export const FASES_COMPLETO = FASES_MD3_COMPLETO;
+export const FASES_COMPETITIVO = FASES_MD3_COMPETITIVO;
+
 // Função para obter fases baseado no modo
-export function getFases(modo: "competitive" | "all"): Fase[] {
-  return modo === "competitive" ? FASES_COMPETITIVO : FASES_COMPLETO;
+export function getFases(modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all"): Fase[] {
+  if (modo === "md1-competitive") return FASES_MD1_COMPETITIVO;
+  if (modo === "md1-all") return FASES_MD1_COMPLETO;
+  if (modo === "md3-competitive") return FASES_MD3_COMPETITIVO;
+  return FASES_MD3_COMPLETO;
 }
 
 // Função para remapear equipe de uma fase baseado em quem começou
@@ -94,8 +125,9 @@ export const FASES = FASES_COMPLETO;
 export const TOTAL_FASES = 13; // exibição: fases 0..13 são as ações
 
 // Função para obter total de fases baseado no modo
-export function getTotalFases(modo: "competitive" | "all"): number {
-  return modo === "competitive" ? 8 : 13; // índices das ações (0-8 para competitivo, 0-13 para completo)
+export function getTotalFases(modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all"): number {
+  if (modo.startsWith("md1")) return 5; // MD1: fases 0-5 são as ações (6 bans)
+  return modo === "md3-competitive" ? 8 : 13; // MD3: 0-8 para competitivo, 0-13 para completo
 }
 
 function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): VetoState {
@@ -112,7 +144,8 @@ function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): Vet
     return { ...state, faseAtual: proximaFase };
   }
 
-  const poolDisponivel = state.modo === "competitive" ? COMPETITIVE_ROTATION : MAP_POOL;
+  const isCompetitivo = state.modo.includes("competitive");
+  const poolDisponivel = isCompetitivo ? COMPETITIVE_ROTATION : MAP_POOL;
   const decider = poolDisponivel.find((m) => {
     if (state.mapasBanidos.some((b) => b.nome === m)) return false;
     if (state.picks.mapa1.nome === m) return false;
@@ -142,7 +175,7 @@ function promoverDeciderSeNecessario(state: VetoState, proximaFase: number): Vet
   };
 }
 
-export function createInitialState(equipes: { A: string; B: string }, modo: "competitive" | "all" = "all", equipeQueComeça: "A" | "B" = "A"): VetoState {
+export function createInitialState(equipes: { A: string; B: string }, modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all" = "md3-all", equipeQueComeça: "A" | "B" = "A"): VetoState {
   const empty: PickInfo = {
     nome: null,
     escolhidoPor: null,
@@ -165,7 +198,8 @@ export function createInitialState(equipes: { A: string; B: string }, modo: "com
 }
 
 export function mapasDisponiveis(state: VetoState): MapName[] {
-  const poolDisponivel = state.modo === "competitive" ? COMPETITIVE_ROTATION : MAP_POOL;
+  const isCompetitivo = state.modo.includes("competitive");
+  const poolDisponivel = isCompetitivo ? COMPETITIVE_ROTATION : MAP_POOL;
   const usados = new Set<string>([
     ...state.mapasBanidos.map((b) => b.nome),
     ...(state.picks.mapa1.nome ? [state.picks.mapa1.nome] : []),

@@ -8,6 +8,22 @@ import {
 const STORAGE_KEY = "valorant-veto-state-v1";
 const STORAGE_EVENT = "valorant-veto-state-updated";
 
+type VetoMode = "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all";
+
+function isSameSetup(
+  state: VetoState,
+  equipes: { A: string; B: string },
+  modo: VetoMode,
+  equipeQueComeça: "A" | "B",
+) {
+  return (
+    state.equipes.A === equipes.A &&
+    state.equipes.B === equipes.B &&
+    state.modo === modo &&
+    state.equipeQueComeça === equipeQueComeça
+  );
+}
+
 function load(): VetoState | null {
   if (typeof window === "undefined") return null;
   try {
@@ -27,13 +43,20 @@ function save(state: VetoState) {
   }
 }
 
-export function useVeto(equipes: { A: string; B: string } | null, modo: "competitive" | "all" = "all", equipeQueComeça: "A" | "B" = "A") {
+export function useVeto(equipes: { A: string; B: string } | null, modo: VetoMode = "md3-all", equipeQueComeça: "A" | "B" = "A") {
   const isHydratingRef = useRef(false);
   const hasMountedRef = useRef(false);
   const [state, dispatch] = useReducer(
     vetoReducer,
     null,
-    () => load() ?? createInitialState(equipes ?? { A: "Equipe A", B: "Equipe B" }, modo, equipeQueComeça),
+    () => {
+      const fallbackEquipes = equipes ?? { A: "Equipe A", B: "Equipe B" };
+      const stored = load();
+      if (stored && isSameSetup(stored, fallbackEquipes, modo, equipeQueComeça)) {
+        return stored;
+      }
+      return createInitialState(fallbackEquipes, modo, equipeQueComeça);
+    },
   );
 
   const syncedDispatch = useCallback<typeof dispatch>((action) => {
@@ -45,6 +68,7 @@ export function useVeto(equipes: { A: string; B: string } | null, modo: "competi
 
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
+      save(state);
       return;
     }
 
