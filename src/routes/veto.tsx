@@ -9,6 +9,7 @@ import { MAP_POOL, COMPETITIVE_ROTATION, type MapName, MAP_IMAGES } from "@/lib/
 const SETUP_KEY = "valorant-veto-equipes-v1";
 const MODE_KEY = "valorant-veto-mode-v1";
 const DRAW_KEY = "valorant-veto-draw-v1";
+const ROOM_KEY = "valorant-veto-room-v1";
 
 export const Route = createFileRoute("/veto")({
   head: () => ({
@@ -161,6 +162,12 @@ function DrawScreen({ equipes, onDrawComplete }: { equipes: { A: string; B: stri
 
 function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all" }) {
   const navigate = useNavigate();
+  const roomId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("room") ??
+        localStorage.getItem(ROOM_KEY) ??
+        sessionStorage.getItem(ROOM_KEY)
+      : null;
   
   // Ler resultado do sorteio
   const drawResult = (typeof window !== "undefined" 
@@ -169,7 +176,8 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
   
   const equipeQueComeça = drawResult ?? "A";
   
-  const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça);
+  const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça, { roomId });
+  const roomQuery = roomId ? `?room=${encodeURIComponent(roomId)}` : "";
 
   const fases = getFases(modo);
   const fase = fases[state.faseAtual];
@@ -180,8 +188,10 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
       // Limpar também o resultado do sorteio e modo selecionado
       localStorage.removeItem(DRAW_KEY);
       localStorage.removeItem(MODE_KEY);
+      localStorage.removeItem(ROOM_KEY);
       sessionStorage.removeItem(DRAW_KEY);
       sessionStorage.removeItem(MODE_KEY);
+      sessionStorage.removeItem(ROOM_KEY);
       dispatch({ type: "RESET" });
       // Recarregar a página para reiniciar o sorteio
       window.location.reload();
@@ -192,7 +202,9 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
     clearVetoStorage();
     // Limpar também o modo selecionado
     localStorage.removeItem(MODE_KEY);
+    localStorage.removeItem(ROOM_KEY);
     sessionStorage.removeItem(MODE_KEY);
+    sessionStorage.removeItem(ROOM_KEY);
     navigate({ to: "/" });
   };
 
@@ -367,10 +379,10 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
               </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm">
-              <a href="/team/a">Equipe A</a>
+              <a href={`/team/a${roomQuery}`}>Equipe A</a>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <a href="/team/b">Equipe B</a>
+              <a href={`/team/b${roomQuery}`}>Equipe B</a>
             </Button>
             <Button onClick={handleReset} variant="ghost" size="sm">
               Recomeçar

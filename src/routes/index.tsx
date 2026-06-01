@@ -11,6 +11,7 @@ import { MAP_IMAGES, type MapName } from "@/lib/maps";
 
 const SETUP_KEY = "valorant-veto-equipes-v1";
 const DRAW_KEY = "valorant-veto-draw-v1";
+const ROOM_KEY = "valorant-veto-room-v1";
 const PREVIEW_MAPS: MapName[] = ["Ascent", "Haven", "Lotus", "Sunset"];
 
 export const Route = createFileRoute("/")({
@@ -31,9 +32,11 @@ function SetupPage() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!a.trim() || !b.trim()) return;
+    const roomId = createRoomId();
     clearVetoStorage();
     localStorage.removeItem(DRAW_KEY);
     sessionStorage.removeItem(DRAW_KEY);
+    localStorage.setItem(ROOM_KEY, roomId);
     localStorage.setItem(SETUP_KEY, JSON.stringify({ A: a.trim(), B: b.trim() }));
     navigate({ to: "/mode" });
   };
@@ -182,4 +185,12 @@ function SetupPage() {
       </div>
     </main>
   );
+}
+
+function createRoomId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+  }
+
+  return Math.random().toString(36).slice(2, 14);
 }

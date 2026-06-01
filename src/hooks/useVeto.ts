@@ -43,14 +43,44 @@ function save(state: VetoState) {
   }
 }
 
-export function useVeto(equipes: { A: string; B: string } | null, modo: VetoMode = "md3-all", equipeQueComeça: "A" | "B" = "A") {
+async function loadRemote(roomId: string): Promise<VetoState | null> {
+  const response = await fetch(`/api/veto/${encodeURIComponent(roomId)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Nao foi possivel carregar a sala.");
+  const data = (await response.json()) as { state: VetoState | null };
+  return data.state;
+}
+
+async function saveRemote(roomId: string, state: VetoState) {
+  await fetch(`/api/veto/${encodeURIComponent(roomId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state }),
+  });
+}
+
+export function useVeto(
+  equipes: { A: string; B: string } | null,
+  modo: VetoMode = "md3-all",
+  equipeQueComeça: "A" | "B" = "A",
+  options: { roomId?: string | null; initialState?: VetoState | null } = {},
+) {
   const isHydratingRef = useRef(false);
   const hasMountedRef = useRef(false);
+  const lastRemoteSaveRef = useRef("");
+  const roomId = options.roomId?.trim() || null;
   const [state, dispatch] = useReducer(
     vetoReducer,
     null,
     () => {
       const fallbackEquipes = equipes ?? { A: "Equipe A", B: "Equipe B" };
+      if (
+        options.initialState &&
+        isSameSetup(options.initialState, fallbackEquipes, modo, equipeQueComeça)
+      ) {
+        return options.initialState;
+      }
+
       const stored = load();
       if (stored && isSameSetup(stored, fallbackEquipes, modo, equipeQueComeça)) {
         return stored;
@@ -79,6 +109,46 @@ export function useVeto(equipes: { A: string; B: string } | null, modo: VetoMode
 
     save(state);
   }, [state]);
+
+  useEffect(() => {
+    if (!roomId || typeof window === "undefined") return;
+
+    let cancelled = false;
+
+    const syncRemote = async () => {
+      try {
+        const next = await loadRemote(roomId);
+        if (!next || cancelled) return;
+
+        const serialized = JSON.stringify(next);
+        if (serialized === JSON.stringify(state)) return;
+        if (serialized === lastRemoteSaveRef.current) return;
+
+        isHydratingRef.current = true;
+        dispatch({ type: "HYDRATE", state: next });
+      } catch {
+        // A tela local continua operando; a proxima tentativa tenta sincronizar novamente.
+      }
+    };
+
+    void syncRemote();
+    const interval = window.setInterval(syncRemote, 1200);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [roomId, state]);
+
+  useEffect(() => {
+    if (!roomId || typeof window === "undefined") return;
+    if (isHydratingRef.current) return;
+
+    const serialized = JSON.stringify(state);
+    if (serialized === lastRemoteSaveRef.current) return;
+    lastRemoteSaveRef.current = serialized;
+    void saveRemote(roomId, state);
+  }, [roomId, state]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
