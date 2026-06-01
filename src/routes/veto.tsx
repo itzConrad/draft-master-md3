@@ -178,6 +178,9 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
   
   const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça, { roomId });
   const roomQuery = roomId ? `?room=${encodeURIComponent(roomId)}` : "";
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const teamALink = roomId ? `${appOrigin}/team/a${roomQuery}` : "";
+  const teamBLink = roomId ? `${appOrigin}/team/b${roomQuery}` : "";
 
   const fases = getFases(modo);
   const fase = fases[state.faseAtual];
@@ -206,6 +209,11 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
     sessionStorage.removeItem(MODE_KEY);
     sessionStorage.removeItem(ROOM_KEY);
     navigate({ to: "/" });
+  };
+
+  const copyLink = async (link: string) => {
+    if (!link || typeof navigator === "undefined") return;
+    await navigator.clipboard.writeText(link);
   };
 
   // Fase final
@@ -510,16 +518,56 @@ function VetoContent({ equipes, modo }: { equipes: { A: string; B: string }; mod
           </div>
         </div>
 
-        {/* Modo admin */}
+        {/* Sala e links */}
         <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-sm mb-2">Modo admin</h3>
-          <div className="flex flex-wrap gap-1">
+          <h3 className="font-semibold text-sm mb-2">Sala ativa</h3>
+          {roomId ? (
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">ID da sala</p>
+                <p className="mt-1 break-all rounded bg-muted px-2 py-1 font-mono text-xs text-foreground">
+                  {roomId}
+                </p>
+              </div>
+              <RemoteTeamLink label="Time A" link={teamALink} onCopy={() => copyLink(teamALink)} />
+              <RemoteTeamLink label="Time B" link={teamBLink} onCopy={() => copyLink(teamBLink)} />
+            </div>
+          ) : (
             <p className="text-xs text-muted-foreground">
-              Esta tela acompanha o veto. As escolhas sao feitas apenas em /team/a e /team/b.
+              Esta sala nao tem link remoto. Volte ao inicio e cadastre as equipes novamente.
             </p>
-          </div>
+          )}
         </div>
       </div>
     </main>
+  );
+}
+
+function RemoteTeamLink({
+  label,
+  link,
+  onCopy,
+}: {
+  label: string;
+  link: string;
+  onCopy: () => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="mt-1 flex gap-2">
+        <a
+          href={link}
+          target="_blank"
+          rel="noreferrer"
+          className="min-w-0 flex-1 truncate rounded border border-border px-2 py-1 text-xs text-[var(--gold)] hover:bg-muted"
+        >
+          {link}
+        </a>
+        <Button type="button" variant="outline" size="sm" onClick={onCopy} className="h-7 px-2 text-xs">
+          Copiar
+        </Button>
+      </div>
+    </div>
   );
 }
