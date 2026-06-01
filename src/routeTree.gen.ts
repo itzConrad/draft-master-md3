@@ -14,6 +14,7 @@ import { Route as VetoRouteImport } from './routes/veto'
 import { Route as ModeRouteImport } from './routes/mode'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TeamSideRouteImport } from './routes/team.$side'
+import { Route as ApiVetoRoomIdRouteImport } from './routes/api/veto.$roomId'
 
 const VisualizacaoRoute = VisualizacaoRouteImport.update({
   id: '/visualizacao',
@@ -40,6 +41,11 @@ const TeamSideRoute = TeamSideRouteImport.update({
   path: '/team/$side',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVetoRoomIdRoute = ApiVetoRoomIdRouteImport.update({
+  id: '/api/veto/$roomId',
+  path: '/api/veto/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
   '/team/$side': typeof TeamSideRoute
+  '/api/veto/$roomId': typeof ApiVetoRoomIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
   '/team/$side': typeof TeamSideRoute
+  '/api/veto/$roomId': typeof ApiVetoRoomIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/veto': typeof VetoRoute
   '/visualizacao': typeof VisualizacaoRoute
   '/team/$side': typeof TeamSideRoute
+  '/api/veto/$roomId': typeof ApiVetoRoomIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mode' | '/veto' | '/visualizacao' | '/team/$side'
+  fullPaths:
+    | '/'
+    | '/mode'
+    | '/veto'
+    | '/visualizacao'
+    | '/team/$side'
+    | '/api/veto/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mode' | '/veto' | '/visualizacao' | '/team/$side'
-  id: '__root__' | '/' | '/mode' | '/veto' | '/visualizacao' | '/team/$side'
+  to:
+    | '/'
+    | '/mode'
+    | '/veto'
+    | '/visualizacao'
+    | '/team/$side'
+    | '/api/veto/$roomId'
+  id:
+    | '__root__'
+    | '/'
+    | '/mode'
+    | '/veto'
+    | '/visualizacao'
+    | '/team/$side'
+    | '/api/veto/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   VetoRoute: typeof VetoRoute
   VisualizacaoRoute: typeof VisualizacaoRoute
   TeamSideRoute: typeof TeamSideRoute
+  ApiVetoRoomIdRoute: typeof ApiVetoRoomIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamSideRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/veto/$roomId': {
+      id: '/api/veto/$roomId'
+      path: '/api/veto/$roomId'
+      fullPath: '/api/veto/$roomId'
+      preLoaderRoute: typeof ApiVetoRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   VetoRoute: VetoRoute,
   VisualizacaoRoute: VisualizacaoRoute,
   TeamSideRoute: TeamSideRoute,
+  ApiVetoRoomIdRoute: ApiVetoRoomIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

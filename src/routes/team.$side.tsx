@@ -4,12 +4,21 @@ import { Clock, Home, Shield, Swords } from "lucide-react";
 import { MapCard } from "@/components/veto/MapCard";
 import { Button } from "@/components/ui/button";
 import { useVeto } from "@/hooks/useVeto";
-import { getFases, mapasDisponiveis, remapearEquipeFase, type Equipe } from "@/lib/vetoMachine";
+import { getFases, mapasDisponiveis, remapearEquipeFase, type Equipe, type VetoState } from "@/lib/vetoMachine";
 import { COMPETITIVE_ROTATION, MAP_POOL, type MapName } from "@/lib/maps";
 
 const SETUP_KEY = "valorant-veto-equipes-v1";
 const MODE_KEY = "valorant-veto-mode-v1";
 const DRAW_KEY = "valorant-veto-draw-v1";
+const ROOM_KEY = "valorant-veto-room-v1";
+
+type TeamSetup = {
+  equipes: { A: string; B: string };
+  modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all";
+  equipeQueComeça: "A" | "B";
+  roomId: string | null;
+  initialState: VetoState | null;
+};
 
 export const Route = createFileRoute("/team/$side")({
   component: TeamVetoPage,
@@ -29,10 +38,34 @@ function readSetup() {
       equipes: JSON.parse(rawEquipes) as { A: string; B: string },
       modo: rawModo as "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all",
       equipeQueComeça: rawDraw,
+      roomId: localStorage.getItem(ROOM_KEY) ?? sessionStorage.getItem(ROOM_KEY),
+      initialState: null,
     };
   } catch {
     return null;
   }
+}
+
+function getRoomIdFromUrl() {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("room");
+}
+
+async function readRemoteSetup(roomId: string): Promise<TeamSetup | null> {
+  const response = await fetch(`/api/veto/${encodeURIComponent(roomId)}`);
+  if (!response.ok) return null;
+
+  const data = (await response.json()) as { state: VetoState | null };
+  const state = data.state;
+  if (!state) return null;
+
+  return {
+    equipes: state.equipes,
+    modo: state.modo,
+    equipeQueComeça: state.equipeQueComeça,
+    roomId,
+    initialState: state,
+  };
 }
 
 function TeamVetoPage() {
@@ -40,24 +73,34 @@ function TeamVetoPage() {
   const normalizedSide = side.toUpperCase();
   const isValidSide = normalizedSide === "A" || normalizedSide === "B";
   const teamSide = normalizedSide as Equipe;
-  const [setup, setSetup] = useState<ReturnType<typeof readSetup>>(null);
+  const [setup, setSetup] = useState<TeamSetup | null>(null);
 
   useEffect(() => {
-    const updateSetup = () => setSetup(readSetup());
+    let cancelled = false;
+
+    const updateSetup = async () => {
+      const roomId = getRoomIdFromUrl();
+      const nextSetup = roomId ? await readRemoteSetup(roomId) : readSetup();
+      if (!cancelled) setSetup(nextSetup);
+    };
+
     updateSetup();
 
     const onStorage = (event: StorageEvent) => {
-      if ([SETUP_KEY, MODE_KEY, DRAW_KEY].includes(event.key ?? "")) {
+      if ([SETUP_KEY, MODE_KEY, DRAW_KEY, ROOM_KEY].includes(event.key ?? "")) {
         updateSetup();
       }
     };
 
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", updateSetup);
+    const interval = window.setInterval(updateSetup, 2000);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", updateSetup);
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -91,7 +134,16 @@ function TeamVetoPage() {
     );
   }
 
-  return <TeamVetoContent teamSide={teamSide} equipes={setup.equipes} modo={setup.modo} equipeQueComeça={setup.equipeQueComeça} />;
+  return (
+    <TeamVetoContent
+      teamSide={teamSide}
+      equipes={setup.equipes}
+      modo={setup.modo}
+      equipeQueComeça={setup.equipeQueComeça}
+      roomId={setup.roomId}
+      initialState={setup.initialState}
+    />
+  );
 }
 
 function TeamVetoContent({
@@ -99,13 +151,17 @@ function TeamVetoContent({
   equipes,
   modo,
   equipeQueComeça,
+  roomId,
+  initialState,
 }: {
   teamSide: Equipe;
   equipes: { A: string; B: string };
   modo: "md1-competitive" | "md1-all" | "md3-competitive" | "md3-all";
   equipeQueComeça: "A" | "B";
+  roomId: string | null;
+  initialState: VetoState | null;
 }) {
-  const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça);
+  const { state, dispatch } = useVeto(equipes, modo, equipeQueComeça, { roomId, initialState });
   const fases = getFases(state.modo);
   const fase = fases[state.faseAtual];
   const mapasDisp = mapasDisponiveis(state);
